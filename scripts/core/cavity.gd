@@ -6,9 +6,10 @@ class_name Cavity
 
 var id: int
 var type: Enums.CavityType
-var center: Vector2i  # 中心位置（网格坐标）
-var size: Vector2i    # 大小（宽度、高度）
-var positions: Array[Vector2i] = []  # 所有位置列表
+var size_category: Enums.CavitySize # 大小分类（小/中/大）
+var center: Vector2i # 中心位置（网格坐标）
+var size: Vector2i # 大小（宽度、高度）
+var positions: Array[Vector2i] = [] # 所有位置列表
 
 ## 构造函数
 func _init(p_id: int, p_type: Enums.CavityType, p_center: Vector2i, p_size: Vector2i):
@@ -16,21 +17,34 @@ func _init(p_id: int, p_type: Enums.CavityType, p_center: Vector2i, p_size: Vect
 	type = p_type
 	center = p_center
 	size = p_size
+	size_category = _determine_size_category(p_size)
 	_update_positions()
+
+## 根据大小判断大小分类
+func _determine_size_category(actual_size: Vector2i) -> Enums.CavitySize:
+	var area = actual_size.x * actual_size.y
+	# 小空洞：面积 <= 12 (3x4, 4x3, 3x3等)
+	# 中空洞：12 < 面积 <= 30 (5x6, 6x5等)
+	# 大空洞：面积 > 30
+	if area <= 12:
+		return Enums.CavitySize.SMALL
+	elif area <= 30:
+		return Enums.CavitySize.MEDIUM
+	else:
+		return Enums.CavitySize.LARGE
 
 ## 更新位置列表
 func _update_positions() -> void:
 	positions.clear()
-	var half_width = size.x / 2.0
-	var half_height = size.y / 2.0
+	# 生成size个格子，中心为center
+	# 对于奇数size，包含center本身；对于偶数size，中心在格子之间
+	var start_x = center.x - (size.x / 2)
+	var end_x = start_x + size.x
+	var start_y = center.y - (size.y / 2)
+	var end_y = start_y + size.y
 	
-	var min_x = int(center.x - half_width)
-	var max_x = int(center.x + half_width)
-	var min_y = int(center.y - half_height)
-	var max_y = int(center.y + half_height)
-	
-	for x in range(min_x, max_x + 1):
-		for y in range(min_y, max_y + 1):
+	for x in range(start_x, end_x):
+		for y in range(start_y, end_y):
 			positions.append(Vector2i(x, y))
 
 ## 检查位置是否在空洞内
@@ -56,4 +70,3 @@ func get_bounds() -> Rect2i:
 ## 获取空洞面积
 func get_area() -> int:
 	return positions.size()
-

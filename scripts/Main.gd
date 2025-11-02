@@ -9,13 +9,14 @@ var tile_manager: TileManager
 var map_generator: MapGenerator
 var pathfinding_manager: PathfindingManager
 
-var _start_point: Vector2i = Vector2i(-1, -1)  # 寻路起点
+var _start_point: Vector2i = Vector2i(-1, -1) # 寻路起点
 
 @onready var terrain_renderer = $World/TerrainRenderer
 @onready var cavity_visualizer = $World/CavityVisualizer
 @onready var path_visualizer = $World/PathVisualizer
-@onready var regenerate_button = $UI/VBoxContainer/RegenerateButton
-@onready var info_label = $UI/VBoxContainer/InfoLabel
+@onready var camera: Camera2D = $Camera
+@onready var regenerate_button = $UILayer/UI/VBoxContainer/RegenerateButton
+@onready var info_label = $UILayer/UI/VBoxContainer/InfoLabel
 
 func _ready():
 	# 初始化管理器
@@ -44,28 +45,38 @@ func _ready():
 	cavity_visualizer.setup(cavity_manager, tile_size)
 	path_visualizer.setup(tile_size)
 	
+	# 将可视化器设置到地图生成器中，实现即时可视化
+	map_generator.set_cavity_visualizer(cavity_visualizer)
+	
 	# 连接按钮信号
 	regenerate_button.pressed.connect(_on_regenerate_pressed)
 	
 	# 生成初始地图
 	generate_map()
+	
+	# 设置相机初始位置到地图中心
+	if camera:
+		camera.position = Vector2(3200, 3200) # 地图中心 (200*32/2)
+		camera.zoom = Vector2(1.0, 1.0)
 
 ## 生成地图
 func generate_map() -> void:
-	# 生成地图
+	# 清空旧的可视化框（必须在生成前清空，因为生成器会立即添加新框）
+	cavity_visualizer.clear_cavities()
+	
+	# 生成地图（会立即生成可视化框）
 	map_generator.GenerateMap()
 	
 	# 同步TerrainManager的地形数据到TileManager
 	var terrain_data = terrain_manager.GetTerrainData()
 	tile_manager.InitializeTiles(
-		terrain_manager.GetWidth(), 
-		terrain_manager.GetHeight(), 
+		terrain_manager.GetWidth(),
+		terrain_manager.GetHeight(),
 		terrain_data
 	)
 	
-	# 渲染地形和空洞
+	# 渲染地形（空洞已在生成时渲染）
 	terrain_renderer.render_terrain()
-	cavity_visualizer.render_cavities()
 	
 	# 更新寻路网格通行性
 	pathfinding_manager.update_walkability()
@@ -110,8 +121,12 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mouse_event = event as InputEventMouseButton
 		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:
-			# 获取鼠标位置（世界坐标）
-			var world_pos = get_global_mouse_position()
+			# 获取鼠标位置（考虑相机）
+			var world_pos: Vector2
+			if camera:
+				world_pos = camera.get_global_mouse_position()
+			else:
+				world_pos = get_global_mouse_position()
 			
 			# 转换为网格坐标
 			var grid_pos = tile_manager.WorldToGrid(world_pos)

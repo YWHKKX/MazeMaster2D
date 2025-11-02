@@ -1,0 +1,38 @@
+# Godot-specific ignores
+.godot/
+
+# Imported files are stored separately
+.import/
+
+# Godot-specific ignores
+export_presets.cfg
+
+# Godot-internal ignores
+*.tmp
+.DS_Store
+desktop.ini
+
+# Godot editor-specific files
+GodotGame.app/
+
+# User-specific files
+user://
+
+# Cache files
+*.godot_cache
+
+# Temporary files
+*.swp
+*.bak
+*~
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Build files
+export/
+
+# OS-specific files
+Thumbs.db
+

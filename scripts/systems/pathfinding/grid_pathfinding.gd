@@ -11,12 +11,18 @@ var _astar_grid: AStarGrid2D
 ## 初始化
 func _init(tile_mgr: TileManager):
 	_tile_manager = tile_mgr
-	_initialize_astar_grid()
 
-## 初始化AStarGrid2D
+## 初始化AStarGrid2D（延迟初始化）
 func _initialize_astar_grid() -> void:
+	if _astar_grid:
+		return  # 已经初始化过了
+	
 	var width = _tile_manager.GetWidth()
 	var height = _tile_manager.GetHeight()
+	
+	# 如果大小为0，表示TileManager还没有初始化，跳过
+	if width == 0 or height == 0:
+		return
 	
 	# 创建AStarGrid2D实例
 	_astar_grid = AStarGrid2D.new()
@@ -31,6 +37,12 @@ func _initialize_astar_grid() -> void:
 
 ## 更新AStarGrid2D的通行性数据
 func _update_astar_grid_walkability() -> void:
+	# 确保已经初始化
+	_initialize_astar_grid()
+	
+	if not _astar_grid:
+		return
+	
 	var width = _tile_manager.GetWidth()
 	var height = _tile_manager.GetHeight()
 	
@@ -47,6 +59,11 @@ func _update_astar_grid_walkability() -> void:
 func find_path_astar_grid(start: Vector2i, end: Vector2i) -> Array[Vector2i]:
 	if start == end:
 		return [start]
+	
+	# 确保已经初始化
+	_initialize_astar_grid()
+	if not _astar_grid:
+		return []
 	
 	# 检查起点和终点是否可通行
 	if not _tile_manager.IsWalkable(start) or not _tile_manager.IsWalkable(end):

@@ -231,15 +231,14 @@ func GenerateOrganicCavity(
 
 ## 验证空洞边界
 func _validate_cavity_bounds(center: Vector2i, size: Vector2i) -> bool:
-	var half_width = size.x / 2.0
-	var half_height = size.y / 2.0
+	# 与_update_positions保持一致
+	var start_x = center.x - (size.x / 2)
+	var start_y = center.y - (size.y / 2)
+	# 最大有效格子坐标是 start + size - 1
+	var max_x = start_x + size.x - 1
+	var max_y = start_y + size.y - 1
 	
-	var min_x = int(center.x - half_width)
-	var max_x = int(center.x + half_width)
-	var min_y = int(center.y - half_height)
-	var max_y = int(center.y + half_height)
-	
-	return _validate_area(min_x, max_x, min_y, max_y)
+	return _validate_area(start_x, max_x, start_y, max_y)
 
 ## 验证区域边界
 func _validate_area(min_x: int, max_x: int, min_y: int, max_y: int) -> bool:

@@ -15,6 +15,13 @@ enum CavityType {
 	ECOSYSTEM    # 生态区域空洞（支持后续生态系统）
 }
 
+## 空洞大小枚举
+enum CavitySize {
+	SMALL,   # 小空洞
+	MEDIUM,  # 中空洞
+	LARGE    # 大空洞
+}
+
 ## 实体类型枚举（为后续阶段预留）
 enum EntityType {
 	UNIT,      # 单位

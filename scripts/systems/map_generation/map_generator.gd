@@ -8,15 +8,21 @@ var _terrain_manager: TerrainManager
 var _cavity_manager: CavityManager
 var _cavity_generator: SimpleCavityGenerator
 var _poisson_sampler: PoissonDiskSampling
+var _cavity_visualizer: CavityVisualizer = null
 
 # 地图尺寸
 var map_width: int = 200
 var map_height: int = 200
 
-# 空洞生成参数
+# 空洞生成参数（不同大小分类的基础尺寸）
 var critical_cavity_size: Vector2i = Vector2i(5, 5)
 var functional_cavity_size: Vector2i = Vector2i(4, 4)
 var ecosystem_cavity_size: Vector2i = Vector2i(3, 3)
+
+# 空洞大小定义
+var small_cavity_size: Vector2i = Vector2i(3, 3)  # 小空洞：面积 <= 12
+var medium_cavity_size: Vector2i = Vector2i(5, 5)  # 中空洞：12 < 面积 <= 30
+var large_cavity_size: Vector2i = Vector2i(8, 8)   # 大空洞：面积 > 30
 
 ## 初始化
 func _init(terrain_mgr: TerrainManager, cavity_mgr: CavityManager):
@@ -24,6 +30,10 @@ func _init(terrain_mgr: TerrainManager, cavity_mgr: CavityManager):
 	_cavity_manager = cavity_mgr
 	_cavity_generator = SimpleCavityGenerator.new(terrain_mgr, cavity_mgr)
 	_poisson_sampler = PoissonDiskSampling.new()
+
+## 设置空洞可视化器（可选）
+func set_cavity_visualizer(visualizer: CavityVisualizer) -> void:
+	_cavity_visualizer = visualizer
 
 ## 生成完整地图
 func GenerateMap() -> void:
@@ -43,6 +53,17 @@ func GenerateMap() -> void:
 	# 5. 不生成连接通道（空洞独立存在，不需要通路）
 	# _connect_all_cavities(critical_cavities + functional_cavities + ecosystem_cavities)
 
+## 根据大小分类随机选择大小
+## 返回值为 Vector2i，概率：小50%、中30%、大20%
+func _roll_cavity_size() -> Vector2i:
+	var roll = randf()
+	if roll < 0.5:
+		return small_cavity_size
+	elif roll < 0.8:
+		return medium_cavity_size
+	else:
+		return large_cavity_size
+
 ## 生成关键空洞
 func GenerateCriticalCavities() -> Array[Cavity]:
 	var cavities: Array[Cavity] = []
@@ -56,6 +77,9 @@ func GenerateCriticalCavities() -> Array[Cavity]:
 	)
 	if dungeon_heart:
 		cavities.append(dungeon_heart)
+		# 立即生成可视化框
+		if _cavity_visualizer:
+			_cavity_visualizer.draw_cavity_immediately(dungeon_heart)
 	
 	# 其他关键建筑（传送门、英雄营地）随机位置
 	# 这里暂时只生成地牢之心，其他关键建筑后续添加
@@ -75,6 +99,8 @@ func GenerateFunctionalCavities(count: int, min_distance: float) -> Array[Cavity
 	
 	for i in range(actual_count):
 		var center = Vector2i(centers[i].x, centers[i].y)
+		# 随机选择大小（概率控制：小50%、中30%、大20%）
+		var random_size = _roll_cavity_size()
 		# 随机选择形状（优先使用噪声形状，参考 MazeMaster3D）
 		var shape_types = [
 			SimpleCavityGenerator.CavityShape.NOISE,
@@ -85,12 +111,15 @@ func GenerateFunctionalCavities(count: int, min_distance: float) -> Array[Cavity
 		var random_shape = shape_types[randi() % shape_types.size()]
 		var cavity = _cavity_generator.GenerateCavity(
 			center,
-			functional_cavity_size,
+			random_size,
 			Enums.CavityType.FUNCTIONAL,
 			random_shape as int
 		)
 		if cavity:
 			cavities.append(cavity)
+			# 立即生成可视化框
+			if _cavity_visualizer:
+				_cavity_visualizer.draw_cavity_immediately(cavity)
 	
 	return cavities
 
@@ -107,6 +136,8 @@ func GenerateEcosystemCavities(count: int, min_distance: float) -> Array[Cavity]
 	
 	for i in range(actual_count):
 		var center = Vector2i(centers[i].x, centers[i].y)
+		# 随机选择大小（概率控制：小50%、中30%、大20%）
+		var random_size = _roll_cavity_size()
 		# 随机选择形状（优先使用噪声形状，参考 MazeMaster3D）
 		var shape_types = [
 			SimpleCavityGenerator.CavityShape.NOISE,
@@ -117,12 +148,15 @@ func GenerateEcosystemCavities(count: int, min_distance: float) -> Array[Cavity]
 		var random_shape = shape_types[randi() % shape_types.size()]
 		var cavity = _cavity_generator.GenerateCavity(
 			center,
-			ecosystem_cavity_size,
+			random_size,
 			Enums.CavityType.ECOSYSTEM,
 			random_shape as int
 		)
 		if cavity:
 			cavities.append(cavity)
+			# 立即生成可视化框
+			if _cavity_visualizer:
+				_cavity_visualizer.draw_cavity_immediately(cavity)
 	
 	return cavities
 
