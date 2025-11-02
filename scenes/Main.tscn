@@ -1,0 +1,47 @@
+[gd_scene load_steps=4 format=3 uid="uid://bq8x7h3m2k4n5"]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_1"]
+[ext_resource type="Script" path="res://scripts/systems/rendering/terrain_renderer.gd" id="1_2"]
+[ext_resource type="Script" path="res://scripts/systems/rendering/cavity_visualizer.gd" id="1_3"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_1")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(3200, 3200)
+zoom = Vector2(0.15, 0.15)
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="TerrainRenderer" type="Node2D" parent="World"]
+script = ExtResource("1_2")
+
+[node name="CavityVisualizer" type="Node2D" parent="World"]
+script = ExtResource("1_3")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -100.0
+offset_right = 220.0
+offset_bottom = -20.0
+grow_vertical = 0
+
+[node name="RegenerateButton" type="Button" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "重新生成地图"
+
+[node name="InfoLabel" type="Label" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "地图信息"
