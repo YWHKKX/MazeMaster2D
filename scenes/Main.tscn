@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://bq8x7h3m2k4n5"]
+[gd_scene load_steps=10 format=3 uid="uid://bq8x7h3m2k4n5"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_1"]
 [ext_resource type="Script" path="res://scripts/systems/rendering/terrain_renderer.gd" id="1_2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/systems/rendering/entity_renderer.gd" id="1_5"]
 [ext_resource type="Script" path="res://scripts/systems/ui/resource_ui.gd" id="1_6"]
 [ext_resource type="Script" path="res://scripts/systems/ui/debug_panel.gd" id="1_7"]
+[ext_resource type="Script" path="res://scripts/systems/ui/unit_bestiary.gd" id="1_8"]
 [ext_resource type="Script" path="res://scripts/systems/camera/camera_controller.gd" id="1_camera"]
 
 [node name="Main" type="Node2D"]
@@ -147,3 +148,13 @@ layout_mode = 2
 text = "点击按钮后在地图上点击位置召唤哥布林"
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="UnitBestiary" type="Control" parent="UILayer"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8")

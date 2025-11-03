@@ -9,7 +9,8 @@ class_name Goblin
 func _init(p_id: int, p_position: Vector2i):
 	var unit_faction = Enums.Faction.PLAYER
 	var unit_max_health = 50
-	var unit_speed = 100.0  # 像素/秒
+	# 基准速度：1瓦块/秒 = 1秒/瓦块，转换为像素/秒：1 * 32 = 32像素/秒
+	var unit_speed = 32.0  # 像素/秒（对应1瓦块/秒，基准速度）
 	super._init(p_id, p_position, unit_faction, unit_max_health, unit_speed)
 
 ## 获取显示名称

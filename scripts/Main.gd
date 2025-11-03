@@ -57,6 +57,12 @@ func _ready():
 	unit_manager = UnitManager.new()
 	unit_manager.initialize()
 	
+	# 第五阶段：初始化工作流系统
+	var workflow_registry = unit_manager.get_workflow_registry()
+	if workflow_registry:
+		# 注册哥布林的工作流
+		GoblinWorkflows.register_all(workflow_registry)
+	
 	# 设置瓦块大小（用于坐标转换）- 增大瓦块尺寸
 	var tile_size = Vector2(32, 32)
 	tile_manager.SetTileSize(tile_size)
@@ -71,6 +77,9 @@ func _ready():
 	pathfinding_manager = PathfindingManager.new()
 	pathfinding_manager.initialize()
 	pathfinding_manager.setup(tile_manager)
+	
+	# 设置UnitManager的管理器引用（让状态类能够访问这些管理器）
+	unit_manager.set_managers(tile_manager, pathfinding_manager, resource_manager)
 	
 	# 设置渲染器
 	terrain_renderer.setup(terrain_manager, tile_size)
@@ -89,6 +98,12 @@ func _ready():
 	if resource_ui:
 		resource_ui.setup(resource_manager)
 	
+	# 第五阶段：初始化单位图鉴系统
+	var unit_database = UnitDatabase.new()
+	var unit_bestiary = $UILayer/UnitBestiary
+	if unit_bestiary:
+		unit_bestiary.setup(unit_database)
+	
 	# 连接按钮信号
 	regenerate_button.pressed.connect(_on_regenerate_pressed)
 	
@@ -102,8 +117,27 @@ func _ready():
 	# 设置相机初始位置到地图中心，初始缩放到合适大小以查看全貌
 	if camera and camera is CameraController:
 		camera.position = Vector2(3200, 3200) # 地图中心 (200*32/2)
-		var initial_zoom = Vector2(0.15, 0.15) # 初始缩放：可以看到大部分地图
+		var initial_zoom = Vector2(0.5, 0.5) # 初始缩放：放大一些方便观察细节（0.15 → 0.5）
 		camera.set_target_zoom(initial_zoom) # 使用公共方法设置，确保同步
+
+## 第五阶段：更新循环（每帧调用）
+## 更新所有单位的状态机和工作流
+func _process(delta: float) -> void:
+	if unit_manager:
+		unit_manager.update_all_units(delta)
+	
+	# 第五阶段：更新资源UI（如果需要实时显示）
+	if resource_ui:
+		resource_ui.refresh()
+	
+	# 第五阶段：更新状态可视化动画
+	if entity_renderer:
+		entity_renderer.update_state_visualizations(delta)
+	
+	# 第五阶段：单位移动后需要重新渲染（可选：可以优化为只在位置改变时渲染）
+	# 暂时每帧都渲染以确保单位位置实时更新
+	if entity_renderer:
+		entity_renderer.render_entities()
 
 ## 生成地图
 func generate_map() -> void:
@@ -164,8 +198,21 @@ func _update_info() -> void:
 func _on_regenerate_pressed() -> void:
 	generate_map()
 
-## 鼠标输入处理
+## 输入处理（包含单位图鉴输入和鼠标输入）
 func _input(event: InputEvent) -> void:
+	# 第五阶段：优先处理单位图鉴输入
+	var unit_bestiary = $UILayer/UnitBestiary
+	if unit_bestiary and unit_bestiary.handle_input(event):
+		return # 事件已被图鉴处理
+	
+	# B键打开/关闭图鉴（在任何时候都可以切换）
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_B:
+			if unit_bestiary:
+				unit_bestiary.toggle()
+			return
+	
+	# 处理鼠标输入
 	if event is InputEventMouseButton:
 		var mouse_event = event as InputEventMouseButton
 		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:

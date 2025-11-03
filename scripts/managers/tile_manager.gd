@@ -207,3 +207,125 @@ func GetWalkableNeighbors(position: Vector2i, include_diagonal: bool = false) ->
 	
 	return walkable_neighbors
 
+## ============================================================================
+## 查找功能接口
+## ============================================================================
+
+## 查找最近的资源
+## start_pos: 起始位置（网格坐标）
+## resource_type: 资源类型（Enums.ResourceType）
+## max_range: 最大搜索范围（网格单位，使用曼哈顿距离）
+## 返回: 找到的ResourceTile或null（同时返回其位置信息）
+func find_nearest_resource(start_pos: Vector2i, resource_type: Enums.ResourceType, max_range: float) -> Dictionary:
+	var best_resource: ResourceTile = null
+	var best_position: Vector2i = Vector2i(-1, -1)
+	var best_distance: float = INF
+	
+	var max_range_int = int(max_range)
+	
+	# 在搜索范围内遍历所有瓦块
+	for dx in range(-max_range_int, max_range_int + 1):
+		for dy in range(-max_range_int, max_range_int + 1):
+			var check_pos = start_pos + Vector2i(dx, dy)
+			
+			# 检查位置是否有效
+			if not IsValidPosition(check_pos.x, check_pos.y):
+				continue
+			
+			# 计算曼哈顿距离
+			var distance = abs(dx) + abs(dy)
+			if distance > max_range:
+				continue
+			
+			# 检查是否有资源
+			var resource_tile = GetResourceTile(check_pos)
+			if resource_tile == null:
+				continue
+			
+			# 检查资源类型是否匹配
+			if resource_tile.resource_type != resource_type:
+				continue
+			
+			# 检查资源是否还有剩余
+			if resource_tile.is_depleted():
+				continue
+			
+			# 更新最近资源
+			if distance < best_distance:
+				best_distance = distance
+				best_resource = resource_tile
+				best_position = check_pos
+	
+	if best_resource:
+		return {
+			"resource": best_resource,
+			"position": best_position
+		}
+	
+	return {}
+
+## 查找最近的建筑
+## start_pos: 起始位置（网格坐标）
+## building_type: 建筑类型字符串（如"DungeonHeart", "Treasury"等）
+## max_range: 最大搜索范围（网格单位，使用曼哈顿距离）
+## 返回: 找到的BuildingTile及其位置信息，或空Dictionary
+func find_nearest_building(start_pos: Vector2i, building_type: String, max_range: float) -> Dictionary:
+	var best_building: BuildingTile = null
+	var best_position: Vector2i = Vector2i(-1, -1)
+	var best_distance: float = INF
+	
+	var max_range_int = int(max_range)
+	
+	# 在搜索范围内遍历所有瓦块
+	for dx in range(-max_range_int, max_range_int + 1):
+		for dy in range(-max_range_int, max_range_int + 1):
+			var check_pos = start_pos + Vector2i(dx, dy)
+			
+			# 检查位置是否有效
+			if not IsValidPosition(check_pos.x, check_pos.y):
+				continue
+			
+			# 计算曼哈顿距离
+			var distance = abs(dx) + abs(dy)
+			if distance > max_range:
+				continue
+			
+			# 检查是否有建筑
+			var building_tile = GetBuildingTile(check_pos)
+			if building_tile == null:
+				continue
+			
+			# 检查建筑类型是否匹配（通过类名匹配）
+			# 支持的类型："DungeonHeart" -> DungeonHeartTile, "Treasury" -> TreasuryTile等
+			var matches_type = false
+			match building_type:
+				"DungeonHeart", "dungeon_heart":
+					matches_type = building_tile is DungeonHeartTile
+				"Treasury", "treasury":
+					# 暂时所有建筑都匹配，后续可以添加TreasuryTile类
+					matches_type = true  # 或者 building_tile is TreasuryTile
+				_:
+					# 默认匹配所有建筑（如果building_type为空或未知）
+					matches_type = (building_type == "" or building_type == "Any")
+			
+			if not matches_type:
+				continue
+			
+			# 检查建筑是否完整（如果已摧毁则忽略）
+			if building_tile.is_destroyed():
+				continue
+			
+			# 更新最近建筑
+			if distance < best_distance:
+				best_distance = distance
+				best_building = building_tile
+				best_position = check_pos
+	
+	if best_building:
+		return {
+			"building": best_building,
+			"position": best_position
+		}
+	
+	return {}
+
