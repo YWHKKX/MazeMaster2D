@@ -151,12 +151,39 @@ MazeMaster2D/
 - **UI**：用户界面系统
 - **Tests**：测试用例
 
+#### 游戏对象类继承体系
+
+**1. 瓦块类继承体系**（基于网格位置）
+- **瓦块基类（Tile）**：基础瓦块数据结构，包含位置、地形类型、通行性等基础属性
+  - **建筑瓦块基类（BuildingTile）**：继承自Tile，包含各种建筑类型
+    - 地牢之心（DungeonHeartTile）
+    - 仓库建筑（StorageTile）
+    - 训练场建筑（TrainingTile）
+    - 防御建筑（DefenseTile）
+    - 魔法建筑（MagicTile）
+    - 其他19种建筑类型
+  - **资源瓦块基类（ResourceTile）**：继承自Tile，包含各种资源节点类型
+    - 金矿（GoldMineTile）
+    - 魔力水晶（ManaCrystalTile）
+    - 食物节点（FoodNodeTile）
+    - 其他资源类型
+
+**2. 单位类继承体系**（独立于网格位置，可移动）
+- **单位基类（Unit）**：基础单位数据结构，包含位置、生命值、阵营等基础属性
+  - **怪物基类（Monster）**：敌对单位类型
+    - 各种怪物单位
+  - **英雄基类（Hero）**：玩家控制或盟友单位
+    - 22种单位类型（4种功能类+18种战斗类）
+  - **野兽基类（Beast）**：中立或野性单位
+    - 各种野兽单位
+
 #### 核心设计原则
 
 1. **单向依赖**：依赖关系是单向的，避免循环依赖
 2. **接口隔离**：跨模块通过 Core 接口通信，不直接依赖具体实现
 3. **分层清晰**：Core → Entities/Managers → Systems → Tests 的清晰分层
 4. **扩展友好**：各层可以定义扩展接口
+5. **瓦块与单位分离**：瓦块（Tile）固定在网格位置，单位（Unit）可独立移动，两者通过位置关联而非继承关系
 
 ---
 
@@ -187,7 +214,7 @@ MazeMaster2D/
    - 瓦块不是简单的类型值，而是包含完整数据结构的对象
    - 每个瓦块大小为32x32像素
 
-2. **瓦块数据结构**
+2. **瓦块数据结构与继承体系**
    每个瓦块（Tile）包含：
    - `position`: Vector2i（网格坐标位置）
    - `terrain_type`: TerrainType（地形类型）
@@ -195,7 +222,11 @@ MazeMaster2D/
    - `is_buildable`: bool（是否可建造）
    - `is_diggable`: bool（是否可挖掘）
    - `state`: TileState（瓦块状态）
-   - 其他扩展属性（资源、建筑引用等）
+   
+   **瓦块类型继承体系**：
+   - **瓦块基类（Tile）**：基础瓦块数据结构
+     - **建筑瓦块基类（BuildingTile）**：包含各种建筑（地牢之心、仓库、训练场等）
+     - **资源瓦块基类（ResourceTile）**：包含各种资源（金矿、魔力水晶、食物节点等）
 
 3. **二维数组存储**
    - TileManager使用二维数组 `tiles[x][y]` 存储所有瓦块
@@ -215,7 +246,8 @@ MazeMaster2D/
    - 支持高效的路径查询和缓存
 
 2. **实体放置系统**
-   - 所有实体（单位、建筑、资源点）基于网格坐标放置
+   - **瓦块实体**：建筑和资源作为瓦块类型，直接存储在Tile对象中，固定在网格位置
+   - **单位实体**：单位独立于瓦块，可移动，通过网格坐标关联到瓦块位置
    - 支持精确的位置对齐和碰撞检测
    - 简化建筑布局和空间管理
 
@@ -231,12 +263,19 @@ MazeMaster2D/
 
 ### 实现细节
 
-- **Tile类**: `scripts/core/tile.gd` - 瓦块数据结构
+- **Tile类**: `scripts/core/tile.gd` - 瓦块数据结构（基类）
+- **BuildingTile类**: `scripts/core/building_tile.gd` - 建筑瓦块基类（继承自Tile，待实现）
+- **ResourceTile类**: `scripts/core/resource_tile.gd` - 资源瓦块基类（继承自Tile，待实现）
 - **TileManager**: `scripts/managers/tile_manager.gd` - 瓦块管理器
 - **TerrainManager**: `scripts/managers/terrain_manager.gd` - 地形数据管理
 - **网格坐标转换**: `scripts/utils/grid_coordinate.gd` - 网格坐标系统工具类
 - **地图尺寸**: 200x200瓦块，每个瓦块32x32像素
 - **空洞形状生成**: `scripts/algorithms/hole_shape_generator.gd` - 基于FastNoiseLite的噪声形状生成器
+
+**架构说明**：
+- 建筑和资源作为瓦块类型存储在Tile中，固定在网格位置
+- 单位作为独立实体管理，可移动，通过网格坐标关联到瓦块位置
+- 这种设计简化了空间管理和碰撞检测
 
 网格系统与寻路系统、实体系统、建造系统等紧密集成，是游戏的底层基础设施。
 
@@ -264,7 +303,7 @@ MazeMaster2D/
 20种模块化状态机，17种完整工作流配置，支持灵活的AI行为组合。详见：[docs/工作流配置系统.md](docs/工作流配置系统.md)
 
 ### 6. AI 与资源系统
-智能任务分配、资源节点管理和 AI 行为系统。
+智能任务分配、资源瓦块管理和 AI 行为系统。资源（如金矿）作为资源瓦块类型存储在网格中，而非独立实体。
 
 ### 7. 战斗系统
 - **战斗接口**：攻击目标与攻击者接口

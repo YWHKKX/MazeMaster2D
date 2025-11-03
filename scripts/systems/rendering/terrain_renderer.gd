@@ -22,6 +22,9 @@ func setup(terrain_mgr: TerrainManager, tile_size: Vector2 = Vector2(32, 32)) ->
 	
 	# 确保使用第 0 层
 	set_layer_enabled(0, true)
+	
+	# 设置 z_index 确保地形在地下层
+	z_index = 0
 
 func render_terrain() -> void:
 	clear()

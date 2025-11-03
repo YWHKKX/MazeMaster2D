@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bq8x7h3m2k4n5"]
+[gd_scene load_steps=9 format=3 uid="uid://bq8x7h3m2k4n5"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_1"]
 [ext_resource type="Script" path="res://scripts/systems/rendering/terrain_renderer.gd" id="1_2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/systems/rendering/path_visualizer.gd" id="1_4"]
 [ext_resource type="Script" path="res://scripts/systems/rendering/entity_renderer.gd" id="1_5"]
 [ext_resource type="Script" path="res://scripts/systems/ui/resource_ui.gd" id="1_6"]
+[ext_resource type="Script" path="res://scripts/systems/ui/debug_panel.gd" id="1_7"]
 [ext_resource type="Script" path="res://scripts/systems/camera/camera_controller.gd" id="1_camera"]
 
 [node name="Main" type="Node2D"]
@@ -93,3 +94,56 @@ text = "魔力: 0"
 [node name="FoodLabel" type="Label" parent="UILayer/ResourceUI/VBoxContainer"]
 layout_mode = 2
 text = "食物: 0"
+
+[node name="DebugPanel" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 280.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("1_7")
+
+[node name="UnitCard" type="Panel" parent="UILayer/DebugPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/DebugPanel/UnitCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="UnitImage" type="TextureRect" parent="UILayer/DebugPanel/UnitCard/VBoxContainer"]
+texture_filter = 2
+layout_mode = 2
+stretch_mode = 5
+
+[node name="UnitNameLabel" type="Label" parent="UILayer/DebugPanel/UnitCard/VBoxContainer"]
+layout_mode = 2
+text = "哥布林"
+horizontal_alignment = 1
+
+[node name="SummonButton" type="Button" parent="UILayer/DebugPanel/UnitCard/VBoxContainer"]
+layout_mode = 2
+text = "召唤"
+
+[node name="InfoLabel" type="Label" parent="UILayer/DebugPanel/UnitCard/VBoxContainer"]
+layout_mode = 2
+text = "点击按钮后在地图上点击位置召唤哥布林"
+horizontal_alignment = 1
+autowrap_mode = 2

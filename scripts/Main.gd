@@ -26,6 +26,10 @@ var _start_point: Vector2i = Vector2i(-1, -1) # 寻路起点
 @onready var regenerate_button = $UILayer/UI/VBoxContainer/RegenerateButton
 @onready var info_label = $UILayer/UI/VBoxContainer/InfoLabel
 @onready var resource_ui = $UILayer/ResourceUI
+@onready var debug_panel = $UILayer/DebugPanel
+
+var _pending_spawn_unit: bool = false
+var _selected_unit_type: Enums.SpecificEntityType = Enums.SpecificEntityType.UNIT_GOBLIN
 
 func _ready():
 	# 初始化基础管理器
@@ -60,8 +64,8 @@ func _ready():
 	# 创建地图生成器
 	map_generator = MapGenerator.new(terrain_manager, cavity_manager)
 	
-	# 设置实体管理器到地图生成器
-	map_generator.set_entity_managers(tile_manager, entity_manager, building_manager, resource_node_manager)
+	# 设置管理器到地图生成器（新架构：只需要TileManager）
+	map_generator.set_entity_managers(tile_manager)
 	
 	# 初始化寻路管理器
 	pathfinding_manager = PathfindingManager.new()
@@ -73,10 +77,10 @@ func _ready():
 	cavity_visualizer.setup(cavity_manager, tile_size)
 	path_visualizer.setup(tile_size)
 	
-	# 第四阶段：设置实体渲染器
+	# 第四阶段：设置实体渲染器（新架构：从Tile读取建筑和资源数据）
 	if entity_renderer:
 		var tile_size_i = Vector2i(int(tile_size.x), int(tile_size.y))
-		entity_renderer.setup(entity_manager, building_manager, resource_node_manager, unit_manager, tile_size_i)
+		entity_renderer.setup(tile_manager, unit_manager, tile_size_i)
 	
 	# 将可视化器设置到地图生成器中，实现即时可视化
 	map_generator.set_cavity_visualizer(cavity_visualizer)
@@ -88,30 +92,28 @@ func _ready():
 	# 连接按钮信号
 	regenerate_button.pressed.connect(_on_regenerate_pressed)
 	
+	# 连接调试面板信号
+	if debug_panel:
+		debug_panel.spawn_unit_requested.connect(_on_spawn_unit_requested)
+	
 	# 生成初始地图
 	generate_map()
 	
 	# 设置相机初始位置到地图中心，初始缩放到合适大小以查看全貌
 	if camera and camera is CameraController:
 		camera.position = Vector2(3200, 3200) # 地图中心 (200*32/2)
-		var initial_zoom = Vector2(0.15, 0.15)  # 初始缩放：可以看到大部分地图
-		camera.set_target_zoom(initial_zoom)  # 使用公共方法设置，确保同步
+		var initial_zoom = Vector2(0.15, 0.15) # 初始缩放：可以看到大部分地图
+		camera.set_target_zoom(initial_zoom) # 使用公共方法设置，确保同步
 
 ## 生成地图
 func generate_map() -> void:
 	# 清空旧的可视化框（必须在生成前清空，因为生成器会立即添加新框）
 	cavity_visualizer.clear_cavities()
 	
-	# 生成地图（会立即生成可视化框）
+	# 生成地图（会立即生成可视化框和实体瓦块）
+	# 注意：GenerateMap() 内部已经调用了 tile_manager.InitializeTiles()
+	# 并生成了建筑和资源瓦块，所以这里不需要再次初始化
 	map_generator.GenerateMap()
-	
-	# 同步TerrainManager的地形数据到TileManager
-	var terrain_data = terrain_manager.GetTerrainData()
-	tile_manager.InitializeTiles(
-		terrain_manager.GetWidth(),
-		terrain_manager.GetHeight(),
-		terrain_data
-	)
 	
 	# 渲染地形（空洞已在生成时渲染）
 	terrain_renderer.render_terrain()
@@ -181,6 +183,12 @@ func _input(event: InputEvent) -> void:
 			if not tile_manager.IsValidPosition(grid_pos.x, grid_pos.y):
 				return
 			
+			# 召唤模式：放置单位
+			if _pending_spawn_unit:
+				_spawn_unit_at_position(grid_pos, _selected_unit_type)
+				_pending_spawn_unit = false
+				return
+			
 			# 检查是否可通行
 			if not tile_manager.IsWalkable(grid_pos):
 				# 点击了不可通行的位置，清除路径
@@ -203,3 +211,58 @@ func _input(event: InputEvent) -> void:
 				# 重置起点为当前点击位置，以便下次点击时继续寻路
 				_start_point = grid_pos
 				path_visualizer.set_start_point(_start_point)
+	
+
+## 召唤单位请求（从控制面板）
+func _on_spawn_unit_requested(unit_type: Enums.SpecificEntityType) -> void:
+	_selected_unit_type = unit_type
+	_pending_spawn_unit = true
+	if debug_panel:
+		debug_panel._update_info("在地图上点击位置召唤哥布林")
+
+## 在指定位置生成单位
+func _spawn_unit_at_position(grid_pos: Vector2i, unit_type: Enums.SpecificEntityType) -> void:
+	# 检查位置是否有效且可通行
+	if not tile_manager.IsValidPosition(grid_pos.x, grid_pos.y):
+		if debug_panel:
+			debug_panel._update_info("错误：位置无效")
+		return
+	
+	if not tile_manager.IsWalkable(grid_pos):
+		if debug_panel:
+			debug_panel._update_info("错误：位置不可通行")
+		return
+	
+	# 检查位置是否已被占用（建筑或资源瓦块）
+	if tile_manager.HasBuilding(grid_pos) or tile_manager.HasResource(grid_pos):
+		if debug_panel:
+			debug_panel._update_info("错误：位置已被建筑或资源占用")
+		return
+	
+	# 检查是否有其他单位在同一位置
+	var existing_units = unit_manager.get_units_at_position(grid_pos)
+	if not existing_units.is_empty():
+		if debug_panel:
+			debug_panel._update_info("错误：位置已被占用")
+		return
+	
+	# 生成单位
+	var unit = unit_manager.spawn_unit(grid_pos, unit_type, entity_manager)
+	if unit:
+		# 重新渲染实体
+		if entity_renderer:
+			entity_renderer.render_entities()
+		
+		if debug_panel:
+			debug_panel._update_info("成功放置 %s 于 (%d, %d)" % [_get_unit_type_name(unit_type), grid_pos.x, grid_pos.y])
+	else:
+		if debug_panel:
+			debug_panel._update_info("错误：生成单位失败")
+
+## 获取单位类型名称
+func _get_unit_type_name(unit_type: Enums.SpecificEntityType) -> String:
+	match unit_type:
+		Enums.SpecificEntityType.UNIT_GOBLIN:
+			return "哥布林"
+		_:
+			return "未知"
