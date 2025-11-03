@@ -29,6 +29,18 @@ enum EntityType {
 	RESOURCE   # 资源
 }
 
+## 具体实体类型枚举（扩展 EntityType）
+enum SpecificEntityType {
+	# 单位类型
+	UNIT_GOBLIN,      # 哥布林
+	
+	# 建筑类型
+	BUILDING_DUNGEON_HEART,  # 地牢之心
+	
+	# 资源节点类型
+	RESOURCE_GOLD_MINE  # 金矿
+}
+
 ## 资源类型枚举（为后续阶段预留）
 enum ResourceType {
 	GOLD,    # 金币

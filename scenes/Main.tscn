@@ -1,9 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://bq8x7h3m2k4n5"]
+[gd_scene load_steps=8 format=3 uid="uid://bq8x7h3m2k4n5"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_1"]
 [ext_resource type="Script" path="res://scripts/systems/rendering/terrain_renderer.gd" id="1_2"]
 [ext_resource type="Script" path="res://scripts/systems/rendering/cavity_visualizer.gd" id="1_3"]
 [ext_resource type="Script" path="res://scripts/systems/rendering/path_visualizer.gd" id="1_4"]
+[ext_resource type="Script" path="res://scripts/systems/rendering/entity_renderer.gd" id="1_5"]
+[ext_resource type="Script" path="res://scripts/systems/ui/resource_ui.gd" id="1_6"]
 [ext_resource type="Script" path="res://scripts/systems/camera/camera_controller.gd" id="1_camera"]
 
 [node name="Main" type="Node2D"]
@@ -24,6 +26,9 @@ script = ExtResource("1_3")
 
 [node name="PathVisualizer" type="Node2D" parent="World"]
 script = ExtResource("1_4")
+
+[node name="EntityRenderer" type="Node2D" parent="World"]
+script = ExtResource("1_5")
 
 [node name="UILayer" type="CanvasLayer" parent="."]
 
@@ -53,3 +58,38 @@ text = "重新生成地图"
 [node name="InfoLabel" type="Label" parent="UILayer/UI/VBoxContainer"]
 layout_mode = 2
 text = "地图信息"
+
+[node name="ResourceUI" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -150.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("1_6")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/ResourceUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GoldLabel" type="Label" parent="UILayer/ResourceUI/VBoxContainer"]
+layout_mode = 2
+text = "金币: 0"
+
+[node name="ManaLabel" type="Label" parent="UILayer/ResourceUI/VBoxContainer"]
+layout_mode = 2
+text = "魔力: 0"
+
+[node name="FoodLabel" type="Label" parent="UILayer/ResourceUI/VBoxContainer"]
+layout_mode = 2
+text = "食物: 0"

@@ -23,12 +23,13 @@ func _init(p_id: int, p_type: Enums.CavityType, p_center: Vector2i, p_size: Vect
 ## 根据大小判断大小分类
 func _determine_size_category(actual_size: Vector2i) -> Enums.CavitySize:
 	var area = actual_size.x * actual_size.y
-	# 小空洞：面积 <= 12 (3x4, 4x3, 3x3等)
-	# 中空洞：12 < 面积 <= 30 (5x6, 6x5等)
-	# 大空洞：面积 > 30
-	if area <= 12:
+	# 更新的大小分类标准（与 map_generator.gd 保持一致）
+	# 小空洞：面积 <= 30 (4x4=16, 5x5=25等)
+	# 中空洞：30 < 面积 <= 100 (8x8=64, 9x9=81等)
+	# 大空洞：面积 > 100 (12x12=144等)
+	if area <= 30:
 		return Enums.CavitySize.SMALL
-	elif area <= 30:
+	elif area <= 100:
 		return Enums.CavitySize.MEDIUM
 	else:
 		return Enums.CavitySize.LARGE

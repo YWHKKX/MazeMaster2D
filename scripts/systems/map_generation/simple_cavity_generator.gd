@@ -53,7 +53,7 @@ func GenerateCavity(
 			return GenerateRectangularCavity(center, base_size, type)
 
 ## 生成矩形空洞
-## 如果边界无效，返回 null
+## 如果边界无效或与现有空洞重叠，返回 null
 func GenerateRectangularCavity(
 	center: Vector2i,
 	size: Vector2i,
@@ -64,7 +64,23 @@ func GenerateRectangularCavity(
 		push_warning("Invalid cavity bounds at center %s with size %s" % [center, size])
 		return null
 	
-	# 创建空洞对象
+	# 直接计算位置列表（避免创建临时对象浪费ID）
+	var positions: Array[Vector2i] = []
+	var start_x = center.x - (size.x / 2)
+	var end_x = start_x + size.x
+	var start_y = center.y - (size.y / 2)
+	var end_y = start_y + size.y
+	
+	for x in range(start_x, end_x):
+		for y in range(start_y, end_y):
+			positions.append(Vector2i(x, y))
+	
+	# 检查是否与现有空洞重叠
+	if _check_cavity_overlap(positions):
+		push_warning("Cavity overlaps with existing cavity at center %s" % center)
+		return null
+	
+	# 创建实际空洞对象
 	var id = _cavity_manager.GetNextId()
 	var cavity = Cavity.new(id, type, center, size)
 	
@@ -114,6 +130,11 @@ func GenerateEllipticalCavity(
 	if positions.is_empty():
 		return null
 	
+	# 检查是否与现有空洞重叠
+	if _check_cavity_overlap(positions):
+		push_warning("Elliptical cavity overlaps with existing cavity at center %s" % center)
+		return null
+	
 	# 创建空洞对象（使用实际边界作为size）
 	var actual_size = Vector2i(max_x - min_x + 1, max_y - min_y + 1)
 	var id = _cavity_manager.GetNextId()
@@ -151,6 +172,11 @@ func GenerateNoiseCavity(
 	)
 	
 	if positions.is_empty():
+		return null
+	
+	# 检查是否与现有空洞重叠
+	if _check_cavity_overlap(positions):
+		push_warning("Noise cavity overlaps with existing cavity at center %s" % center)
 		return null
 	
 	# 计算实际边界
@@ -203,6 +229,11 @@ func GenerateOrganicCavity(
 	if positions.is_empty():
 		return null
 	
+	# 检查是否与现有空洞重叠
+	if _check_cavity_overlap(positions):
+		push_warning("Organic cavity overlaps with existing cavity at center %s" % center)
+		return null
+	
 	# 计算实际边界
 	var min_x = positions[0].x
 	var max_x = positions[0].x
@@ -248,3 +279,28 @@ func _validate_area(min_x: int, max_x: int, min_y: int, max_y: int) -> bool:
 	if min_y < 0 or max_y >= _terrain_manager.GetHeight():
 		return false
 	return true
+
+## 检查空洞位置是否与现有空洞重叠
+## new_positions: 新空洞的位置列表
+## 返回：true 如果有重叠，false 如果没有重叠
+func _check_cavity_overlap(new_positions: Array[Vector2i]) -> bool:
+	if new_positions.is_empty():
+		return false
+	
+	# 获取所有已存在的空洞
+	var existing_cavities = _cavity_manager.GetAllCavities()
+	
+	# 将新空洞的位置转换为集合（使用字典的键来实现快速查找）
+	var new_positions_set = {}
+	for pos in new_positions:
+		var key = "%d,%d" % [pos.x, pos.y]
+		new_positions_set[key] = true
+	
+	# 检查每个现有空洞的位置
+	for existing_cavity in existing_cavities:
+		for existing_pos in existing_cavity.positions:
+			var key = "%d,%d" % [existing_pos.x, existing_pos.y]
+			if new_positions_set.has(key):
+				return true  # 发现重叠
+	
+	return false  # 没有重叠

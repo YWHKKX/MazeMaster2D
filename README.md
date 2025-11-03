@@ -31,7 +31,6 @@ Phase 1 Stage 1-2: Project initialization and terrain manager
 - `Phase n Stage m`: 子阶段完成（阶段被拆分为多个提交时必须使用此格式）
 - `Feat`: 新功能（实现新系统、添加新算法、添加新功能）
 - `Fix`: 错误修复（修复bug、解决崩溃问题）
-- `Docs`: 文档更新（更新README、项目计划等文档）
 - `Refactor`: 代码重构（改进代码结构、优化性能）
 
 ---

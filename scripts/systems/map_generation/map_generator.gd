@@ -10,19 +10,27 @@ var _cavity_generator: SimpleCavityGenerator
 var _poisson_sampler: PoissonDiskSampling
 var _cavity_visualizer: CavityVisualizer = null
 
+# 实体生成相关（可选）
+var _tile_manager: TileManager = null
+var _entity_manager: EntityManager = null
+var _building_manager: BuildingManager = null
+var _resource_node_manager: ResourceNodeManager = null
+var _gold_mine_generator: GoldMineGenerator = null
+
 # 地图尺寸
 var map_width: int = 200
 var map_height: int = 200
 
 # 空洞生成参数（不同大小分类的基础尺寸）
-var critical_cavity_size: Vector2i = Vector2i(5, 5)
-var functional_cavity_size: Vector2i = Vector2i(4, 4)
-var ecosystem_cavity_size: Vector2i = Vector2i(3, 3)
+# 关键空洞使用大空洞尺寸，确保足够大
+var critical_cavity_size: Vector2i = Vector2i(10, 10)  # 关键空洞：大尺寸
+var functional_cavity_size: Vector2i = Vector2i(4, 4)   # 功能空洞：已废弃，使用随机大小
+var ecosystem_cavity_size: Vector2i = Vector2i(3, 3)     # 生态空洞：已废弃，使用随机大小
 
-# 空洞大小定义
-var small_cavity_size: Vector2i = Vector2i(3, 3)  # 小空洞：面积 <= 12
-var medium_cavity_size: Vector2i = Vector2i(5, 5)  # 中空洞：12 < 面积 <= 30
-var large_cavity_size: Vector2i = Vector2i(8, 8)   # 大空洞：面积 > 30
+# 空洞大小定义（增大尺寸以适配200x200地图）
+var small_cavity_size: Vector2i = Vector2i(4, 4)    # 小空洞：面积 16 (<= 30)
+var medium_cavity_size: Vector2i = Vector2i(8, 8)   # 中空洞：面积 64 (30 < area <= 100)
+var large_cavity_size: Vector2i = Vector2i(12, 12)  # 大空洞：面积 144 (> 100)
 
 ## 初始化
 func _init(terrain_mgr: TerrainManager, cavity_mgr: CavityManager):
@@ -34,6 +42,15 @@ func _init(terrain_mgr: TerrainManager, cavity_mgr: CavityManager):
 ## 设置空洞可视化器（可选）
 func set_cavity_visualizer(visualizer: CavityVisualizer) -> void:
 	_cavity_visualizer = visualizer
+
+## 设置实体管理器（可选，用于生成实体）
+func set_entity_managers(tile_mgr: TileManager, entity_mgr: EntityManager, building_mgr: BuildingManager, resource_node_mgr: ResourceNodeManager) -> void:
+	_tile_manager = tile_mgr
+	_entity_manager = entity_mgr
+	_building_manager = building_mgr
+	_resource_node_manager = resource_node_mgr
+	if _tile_manager and _entity_manager and _resource_node_manager:
+		_gold_mine_generator = GoldMineGenerator.new(_tile_manager, _entity_manager, _resource_node_manager)
 
 ## 生成完整地图
 func GenerateMap() -> void:
@@ -50,7 +67,11 @@ func GenerateMap() -> void:
 	# 4. 生成生态空洞（泊松圆盘）- 增加数量以适应更大的地图
 	var ecosystem_cavities = GenerateEcosystemCavities(15, 18.0)
 	
-	# 5. 不生成连接通道（空洞独立存在，不需要通路）
+	# 5. 生成实体（地牢之心和金矿）
+	if _tile_manager and _entity_manager and _building_manager and _resource_node_manager:
+		GenerateEntities(critical_cavities, functional_cavities)
+	
+	# 6. 不生成连接通道（空洞独立存在，不需要通路）
 	# _connect_all_cavities(critical_cavities + functional_cavities + ecosystem_cavities)
 
 ## 根据大小分类随机选择大小
@@ -68,11 +89,11 @@ func _roll_cavity_size() -> Vector2i:
 func GenerateCriticalCavities() -> Array[Cavity]:
 	var cavities: Array[Cavity] = []
 	
-	# 地牢之心在地图中心（使用矩形）
+	# 地牢之心在地图中心（使用矩形，使用大空洞尺寸）
 	var center = Vector2i(map_width / 2, map_height / 2)
 	var dungeon_heart = _cavity_generator.GenerateRectangularCavity(
 		center,
-		critical_cavity_size,
+		large_cavity_size,  # 关键空洞使用大空洞尺寸，确保足够大
 		Enums.CavityType.CRITICAL
 	)
 	if dungeon_heart:
@@ -159,6 +180,46 @@ func GenerateEcosystemCavities(count: int, min_distance: float) -> Array[Cavity]
 				_cavity_visualizer.draw_cavity_immediately(cavity)
 	
 	return cavities
+
+## 生成实体（地牢之心和金矿）
+func GenerateEntities(critical_cavities: Array[Cavity], functional_cavities: Array[Cavity]) -> void:
+	# 生成地牢之心（在关键空洞中心）
+	for cavity in critical_cavities:
+		if cavity.type == Enums.CavityType.CRITICAL:
+			_generate_dungeon_heart(cavity)
+	
+	# 生成金矿（在功能空洞中）
+	if _gold_mine_generator:
+		_gold_mine_generator.generate_gold_mines(functional_cavities, 1)
+
+## 生成地牢之心
+func _generate_dungeon_heart(cavity: Cavity) -> void:
+	if not _tile_manager or not _entity_manager or not _building_manager:
+		return
+	
+	# 地牢之心放在空洞中心
+	var position = cavity.center
+	
+	# 检查是否可以放置（建筑大小 3x3）
+	var building_size = Vector2i(3, 3)
+	# 调整位置，使建筑中心在空洞中心
+	position = position - Vector2i(building_size.x / 2, building_size.y / 2)
+	
+	if _building_manager.can_place_building(position, building_size, _tile_manager, _entity_manager):
+		# 生成实体ID
+		var id = 0
+		if _entity_manager:
+			id = _entity_manager.generate_id()
+		else:
+			id = randi() % 1000000
+		
+		# 创建地牢之心
+		var dungeon_heart = DungeonHeart.new(id, position)
+		
+		# 注册到管理器
+		_building_manager.register_building(dungeon_heart)
+		if _entity_manager:
+			_entity_manager.register_entity(dungeon_heart)
 
 ## 连接所有空洞
 func _connect_all_cavities(cavities: Array[Cavity]) -> void:
