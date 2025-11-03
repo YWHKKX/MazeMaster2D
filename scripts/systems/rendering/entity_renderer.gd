@@ -11,6 +11,9 @@ var _tile_size: Vector2i = Vector2i(32, 32)
 # 用于跟踪已渲染的建筑（避免重复渲染多格建筑）
 var _rendered_buildings: Dictionary = {}
 
+# 状态可视化器字典（unit_id -> StateVisualizer）
+var _state_visualizers: Dictionary = {}
+
 ## 初始化
 func setup(tile_mgr: TileManager, unit_mgr: UnitManager, tile_size: Vector2i = Vector2i(32, 32)) -> void:
 	_tile_manager = tile_mgr
@@ -22,7 +25,8 @@ func setup(tile_mgr: TileManager, unit_mgr: UnitManager, tile_size: Vector2i = V
 
 ## 渲染所有实体
 func render_entities() -> void:
-	clear()
+	# 清空建筑和资源渲染（但保留状态可视化器）
+	_clear_rendered_entities()
 	_rendered_buildings.clear()
 	
 	if not _tile_manager:
@@ -38,9 +42,54 @@ func render_entities() -> void:
 	if _unit_manager and _unit_manager.is_initialized():
 		_render_units()
 
-## 清空所有渲染
+## 更新状态可视化（每帧调用）
+## delta: 帧时间间隔
+## 注意：这个方法需要在Main.gd的_process中调用，以实时更新状态可视化
+func update_state_visualizations(delta: float) -> void:
+	if not _unit_manager:
+		return
+	
+	# 获取工作流管理器
+	var workflow_manager = _unit_manager.get_workflow_manager()
+	
+	var units = _unit_manager.get_all_units()
+	for unit in units:
+		# 确保每个单位都有状态可视化器（如果单位有状态机）
+		var state_machine = _unit_manager.get_state_machine(unit.id)
+		if state_machine:
+			if not _state_visualizers.has(unit.id):
+				var visualizer = StateVisualizer.new()
+				visualizer.setup(unit.id, state_machine, workflow_manager)
+				_state_visualizers[unit.id] = visualizer
+				add_child(visualizer)
+			else:
+				# 如果已经存在但WorkflowManager引用可能变化，更新它
+				var visualizer = _state_visualizers[unit.id]
+				if visualizer and workflow_manager:
+					# StateVisualizer没有set_workflow_manager方法，需要在setup时传递
+					# 这里重新setup以更新引用（如果workflow_manager变化）
+					visualizer.setup(unit.id, state_machine, workflow_manager)
+			
+			# 更新状态可视化器
+			var visualizer = _state_visualizers[unit.id]
+			var world_pos = unit.get_world_position(_tile_size)
+			visualizer.update_visualization(delta, world_pos)
+
+## 清空所有渲染（包括状态可视化器）
 func clear() -> void:
+	_clear_rendered_entities()
+	# 清理状态可视化器字典
+	_state_visualizers.clear()
+
+## 清空实体渲染（但保留状态可视化器）
+func _clear_rendered_entities() -> void:
+	var children_to_remove = []
 	for child in get_children():
+		# 只删除非状态可视化器的节点
+		if not (child is StateVisualizer):
+			children_to_remove.append(child)
+	
+	for child in children_to_remove:
 		child.queue_free()
 
 ## 渲染建筑瓦块（从Tile读取）
@@ -201,6 +250,11 @@ func _render_units() -> void:
 func _create_unit_visual(unit: Unit) -> void:
 	var world_pos = unit.get_world_position(_tile_size)
 	
+	# 第五阶段：创建状态可视化器（用于显示状态指示器 - 右上角空心矩形）
+	# 注意：状态可视化器的创建和更新由 update_state_visualizations() 处理
+	# 这里不需要重复创建，因为 render_entities() 每帧都会调用
+	# 但需要确保状态可视化器在 update_state_visualizations() 中被正确更新
+	
 	# 获取单位图片路径
 	var texture_path = _get_unit_texture_path(unit)
 	
@@ -208,6 +262,7 @@ func _create_unit_visual(unit: Unit) -> void:
 		# 使用图片渲染
 		var sprite = Sprite2D.new()
 		sprite.position = world_pos
+		sprite.z_index = 15  # 单位显示在建筑/资源之上，但在状态指示器之下
 		
 		# 加载纹理
 		var texture = load(texture_path)
@@ -216,16 +271,20 @@ func _create_unit_visual(unit: Unit) -> void:
 			# 调整大小以适应瓦块（可选：保持原始大小或缩放）
 			var scale_factor = float(_tile_size.x) / float(texture.get_width()) * 0.8 # 80%瓦块大小
 			sprite.scale = Vector2(scale_factor, scale_factor)
+			
+			# 单位保持原始颜色，不使用状态颜色调制
+			# 状态指示器通过StateVisualizer独立绘制在右上角
+			sprite.modulate = Color.WHITE
 		else:
 			push_warning("Failed to load texture: %s" % texture_path)
 			# 如果加载失败，使用颜色圆形作为后备
-			_create_unit_fallback_visual(unit, world_pos)
+			_create_unit_fallback_visual(unit, world_pos, Color.WHITE)
 			return
 		
 		add_child(sprite)
 	else:
 		# 如果没有图片，使用颜色圆形作为后备
-		_create_unit_fallback_visual(unit, world_pos)
+		_create_unit_fallback_visual(unit, world_pos, Color.WHITE)
 
 ## 获取单位纹理路径
 func _get_unit_texture_path(unit: Unit) -> String:
@@ -235,11 +294,15 @@ func _get_unit_texture_path(unit: Unit) -> String:
 	return ""
 
 ## 创建单位后备可视化（当图片不可用时）
-func _create_unit_fallback_visual(unit: Unit, world_pos: Vector2) -> void:
+## unit: 单位实例
+## world_pos: 世界坐标位置
+## status_color: 状态颜色（已弃用，单位保持原始颜色，状态通过右上角指示器显示）
+func _create_unit_fallback_visual(unit: Unit, world_pos: Vector2, status_color: Color = Color.WHITE) -> void:
 	var radius = float(_tile_size.x) * 0.25 # 圆形半径为瓦块大小的25%
 	
-	# 根据单位类型和阵营选择颜色
+	# 根据单位类型和阵营选择颜色（单位保持原始颜色，不混合状态颜色）
 	var color = _get_unit_color(unit)
+	# 注意：状态颜色现在通过StateVisualizer在右上角显示，不再影响单位本身颜色
 	
 	# 使用Polygon2D创建圆形
 	var polygon = Polygon2D.new()
