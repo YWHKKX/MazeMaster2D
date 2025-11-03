@@ -38,8 +38,32 @@ enum EntityType {
 
 ## 具体实体类型枚举（扩展 EntityType）
 enum SpecificEntityType {
-	# 单位类型
-	UNIT_GOBLIN,      # 哥布林
+	# 单位类型（22种）
+	# 功能类（4种）
+	UNIT_GOBLIN,              # 哥布林
+	UNIT_GOBLIN_ENGINEER,     # 地精
+	UNIT_GOBLIN_BARTENDER,    # 地精酒保
+	UNIT_GOBLIN_SMITH,        # 地精铁匠
+	
+	# 战斗类（18种）
+	UNIT_GOBLIN_SCOUT,        # 哥布林斥候
+	UNIT_GOBLIN_WARRIOR,      # 哥布林战士
+	UNIT_ORC,                 # 兽人
+	UNIT_ORC_BOUNCER,         # 兽人打手
+	UNIT_ORC_SCOUT,           # 兽人斥候
+	UNIT_ORC_HUNTER,          # 兽人猎手
+	UNIT_ORC_CROSSBOW_HUNTER, # 兽人劲弩猎手
+	UNIT_ORC_WARRIOR,         # 兽人战士
+	UNIT_ORC_HEAVY_WARRIOR,   # 兽人重装战士
+	UNIT_ORC_GLADIATOR,       # 兽人角斗士
+	UNIT_ORC_ELITE_GLADIATOR, # 兽人王牌斗士
+	UNIT_ORC_CHAMPION,        # 兽人冠军
+	UNIT_ORC_BEASTMASTER,      # 兽人驯兽师
+	UNIT_ORC_SHAMAN,           # 兽人萨满
+	UNIT_WEREWOLF,            # 狼人
+	UNIT_TROLL,               # 巨魔
+	UNIT_MINOTAUR,            # 牛头人
+	UNIT_CENTAUR,             # 半人马
 	
 	# 建筑类型
 	BUILDING_DUNGEON_HEART,  # 地牢之心
