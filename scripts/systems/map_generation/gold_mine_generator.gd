@@ -2,76 +2,63 @@ extends RefCounted
 class_name GoldMineGenerator
 
 ## 金矿生成器
-## 在功能空洞中生成金矿
+## 在地图上任意可建造位置生成金矿瓦块
 
 var _tile_manager: TileManager
-var _entity_manager: EntityManager
-var _resource_node_manager: ResourceNodeManager
 
 ## 初始化
-func _init(tile_mgr: TileManager, entity_mgr: EntityManager, resource_node_mgr: ResourceNodeManager):
+func _init(tile_mgr: TileManager):
 	_tile_manager = tile_mgr
-	_entity_manager = entity_mgr
-	_resource_node_manager = resource_node_mgr
 
-## 在指定空洞中生成金矿
-## cavity: 空洞对象
-## 返回：生成的金矿，如果失败返回 null
-func generate_gold_mine_in_cavity(cavity: Cavity) -> GoldMine:
-	if cavity.positions.is_empty():
-		return null
+## 在地图任意位置生成一个金矿瓦块
+## 返回：生成的金矿瓦块位置，如果失败返回 null
+func generate_gold_mine_random() -> Vector2i:
+	if not _tile_manager:
+		return Vector2i(-1, -1)
 	
-	# 在空洞内随机选择可建造位置
+	# 获取地图大小
+	var width = _tile_manager.GetWidth()
+	var height = _tile_manager.GetHeight()
+	
+	# 收集所有可建造位置（且没有建筑或资源）
 	var candidate_positions: Array[Vector2i] = []
-	for pos in cavity.positions:
-		# 检查地形是否可建造
-		var tile = _tile_manager.GetTile(pos)
-		if tile and tile.is_buildable:
-			# 检查是否已有实体
-			if _entity_manager and not _entity_manager.has_entity_at_position(pos):
-				candidate_positions.append(pos)
+	for x in range(width):
+		for y in range(height):
+			var pos = Vector2i(x, y)
+			var tile = _tile_manager.GetTile(pos)
+			if tile and tile.is_buildable:
+				# 检查是否已有建筑或资源
+				if not _tile_manager.HasBuilding(pos) and not _tile_manager.HasResource(pos):
+					candidate_positions.append(pos)
 	
 	if candidate_positions.is_empty():
-		return null
+		return Vector2i(-1, -1)
 	
 	# 随机选择一个位置
 	var random_pos = candidate_positions[randi() % candidate_positions.size()]
 	
-	# 生成实体ID
-	var id = 0
-	if _entity_manager:
-		id = _entity_manager.generate_id()
-	else:
-		id = randi() % 1000000
+	# 创建金矿瓦块数据
+	var gold_mine_tile = GoldMineTile.new()
 	
-	# 创建金矿
-	var gold_mine = GoldMine.new(id, random_pos)
+	# 存储在Tile中
+	_tile_manager.SetResourceTile(random_pos, gold_mine_tile)
 	
-	# 注册到管理器
-	if _resource_node_manager:
-		_resource_node_manager.register_node(gold_mine)
-	if _entity_manager:
-		_entity_manager.register_entity(gold_mine)
-	
-	return gold_mine
+	return random_pos
 
-## 在多个功能空洞中生成金矿
-## cavities: 空洞数组
-## max_per_cavity: 每个空洞最多生成的金矿数量（默认1）
-func generate_gold_mines(cavities: Array[Cavity], max_per_cavity: int = 1) -> Array[GoldMine]:
-	var gold_mines: Array[GoldMine] = []
+## 在地图上生成指定数量的金矿瓦块
+## count: 要生成的金矿数量
+## 返回：生成的金矿位置数组
+func generate_gold_mines(count: int = 20) -> Array[Vector2i]:
+	var gold_mine_positions: Array[Vector2i] = []
+	var attempts = 0
+	var max_attempts = count * 50  # 最多尝试次数
 	
-	for cavity in cavities:
-		# 每个空洞最多生成 max_per_cavity 个金矿
-		var count = 0
-		var attempts = 0
-		while count < max_per_cavity and attempts < 10:  # 最多尝试10次
-			var gold_mine = generate_gold_mine_in_cavity(cavity)
-			if gold_mine:
-				gold_mines.append(gold_mine)
-				count += 1
-			attempts += 1
+	while gold_mine_positions.size() < count and attempts < max_attempts:
+		var pos = generate_gold_mine_random()
+		if pos.x >= 0 and pos.y >= 0:  # 有效位置
+			gold_mine_positions.append(pos)
+		attempts += 1
 	
-	return gold_mines
+	return gold_mine_positions
 
 

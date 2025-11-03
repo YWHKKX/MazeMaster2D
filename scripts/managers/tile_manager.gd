@@ -58,6 +58,42 @@ func UpdateTileTerrain(position: Vector2i, terrain_type: Enums.TerrainType) -> v
 	if tile:
 		tile.set_terrain_type(terrain_type)
 
+## 设置建筑瓦块数据
+func SetBuildingTile(position: Vector2i, building_data: BuildingTile) -> void:
+	var tile = GetTile(position)
+	if tile:
+		tile.tile_type = Enums.TileType.BUILDING
+		tile.building_data = building_data
+
+## 获取建筑瓦块数据
+func GetBuildingTile(position: Vector2i) -> BuildingTile:
+	var tile = GetTile(position)
+	if tile and tile.tile_type == Enums.TileType.BUILDING:
+		return tile.building_data
+	return null
+
+## 设置资源瓦块数据
+func SetResourceTile(position: Vector2i, resource_data: ResourceTile) -> void:
+	var tile = GetTile(position)
+	if tile:
+		tile.tile_type = Enums.TileType.RESOURCE
+		tile.resource_data = resource_data
+
+## 获取资源瓦块数据
+func GetResourceTile(position: Vector2i) -> ResourceTile:
+	var tile = GetTile(position)
+	if tile and tile.tile_type == Enums.TileType.RESOURCE:
+		return tile.resource_data
+	return null
+
+## 检查位置是否有建筑
+func HasBuilding(position: Vector2i) -> bool:
+	return GetBuildingTile(position) != null
+
+## 检查位置是否有资源
+func HasResource(position: Vector2i) -> bool:
+	return GetResourceTile(position) != null
+
 ## 检查位置是否可通行
 func IsWalkable(position: Vector2i) -> bool:
 	var tile = GetTile(position)

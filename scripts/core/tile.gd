@@ -6,9 +6,16 @@ class_name Tile
 
 var position: Vector2i  # 网格坐标位置
 var terrain_type: Enums.TerrainType  # 地形类型
+var tile_type: Enums.TileType = Enums.TileType.BASIC  # 瓦块类型（普通/建筑/资源）
 var is_walkable: bool = true  # 是否可通行
 var is_buildable: bool = false  # 是否可建造
 var is_diggable: bool = false  # 是否可挖掘
+
+# 建筑数据（如果 tile_type == BUILDING）
+var building_data: BuildingTile = null
+
+# 资源数据（如果 tile_type == RESOURCE）
+var resource_data: ResourceTile = null
 
 ## 构造函数
 func _init(p_position: Vector2i, p_terrain_type: Enums.TerrainType):

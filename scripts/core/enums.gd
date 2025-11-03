@@ -8,6 +8,13 @@ enum TerrainType {
 	WALL    # 墙壁
 }
 
+## 瓦块类型枚举（用于区分普通瓦块、建筑瓦块、资源瓦块）
+enum TileType {
+	BASIC,      # 普通瓦块（只有地形信息）
+	BUILDING,   # 建筑瓦块（包含建筑数据）
+	RESOURCE    # 资源瓦块（包含资源数据）
+}
+
 ## 空洞类型枚举
 enum CavityType {
 	CRITICAL,    # 关键建筑空洞（地牢之心、传送门、英雄营地等）
