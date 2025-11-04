@@ -243,21 +243,22 @@ func _input(event: InputEvent) -> void:
 				_start_point = Vector2i(-1, -1)
 				return
 			
+			# 路径可视化已禁用（移除鼠标左键点击时的路径可视化）
 			# 如果还没有起点，设置起点
-			if _start_point.x < 0 or _start_point.y < 0:
-				_start_point = grid_pos
-				path_visualizer.set_start_point(_start_point)
-			else:
-				# 计算路径
-				var path = pathfinding_manager.find_path(_start_point, grid_pos)
-				
-				# 显示路径
-				path_visualizer.set_path(path)
-				path_visualizer.set_end_point(grid_pos)
-				
-				# 重置起点为当前点击位置，以便下次点击时继续寻路
-				_start_point = grid_pos
-				path_visualizer.set_start_point(_start_point)
+			# if _start_point.x < 0 or _start_point.y < 0:
+			# 	_start_point = grid_pos
+			# 	path_visualizer.set_start_point(_start_point)
+			# else:
+			# 	# 计算路径
+			# 	var path = pathfinding_manager.find_path(_start_point, grid_pos)
+			# 	
+			# 	# 显示路径
+			# 	path_visualizer.set_path(path)
+			# 	path_visualizer.set_end_point(grid_pos)
+			# 	
+			# 	# 重置起点为当前点击位置，以便下次点击时继续寻路
+			# 	_start_point = grid_pos
+			# 	path_visualizer.set_start_point(_start_point)
 	
 
 ## 召唤单位请求（从控制面板）

@@ -28,6 +28,10 @@ func add_mana(amount: int) -> void:
 func add_food(amount: int) -> void:
 	_resources.add_resource(Enums.ResourceType.FOOD, amount)
 
+## 添加铁矿
+func add_iron(amount: int) -> void:
+	_resources.add_resource(Enums.ResourceType.IRON, amount)
+
 ## 移除金币
 func remove_gold(amount: int) -> int:
 	return _resources.remove_resource(Enums.ResourceType.GOLD, amount)
@@ -40,6 +44,10 @@ func remove_mana(amount: int) -> int:
 func remove_food(amount: int) -> int:
 	return _resources.remove_resource(Enums.ResourceType.FOOD, amount)
 
+## 移除铁矿
+func remove_iron(amount: int) -> int:
+	return _resources.remove_resource(Enums.ResourceType.IRON, amount)
+
 ## 获取金币
 func get_gold() -> int:
 	return _resources.get_resource(Enums.ResourceType.GOLD)
@@ -51,6 +59,10 @@ func get_mana() -> int:
 ## 获取食物
 func get_food() -> int:
 	return _resources.get_resource(Enums.ResourceType.FOOD)
+
+## 获取铁矿
+func get_iron() -> int:
+	return _resources.get_resource(Enums.ResourceType.IRON)
 
 ## 获取所有资源
 func get_total_resources() -> Dictionary:

@@ -59,7 +59,7 @@ func update(delta: float, context: Dictionary = {}) -> int:
 		# 验证目标仍然有效
 		var target_pos = shared_context.get("found_target_position", Vector2i(-1, -1))
 		if target_pos != Vector2i(-1, -1):
-			var target_tile = tile_manager.GetResourceTile(target_pos) if _target_type == "GoldMine" else null
+			var target_tile = tile_manager.GetResourceTile(target_pos)
 			if target_tile and not target_tile.is_depleted():
 				# 目标仍然有效，已经找到
 				set_result(StateResult.Result.SUCCESS)
@@ -72,27 +72,36 @@ func update(delta: float, context: Dictionary = {}) -> int:
 	# 根据目标类型查找
 	var found = false
 	
+	# 根据目标类型映射到资源类型
+	var resource_type: Enums.ResourceType = Enums.ResourceType.GOLD
 	match _target_type:
 		"GoldMine", "gold_mine":
-			# 查找金矿资源
-			var result = tile_manager.find_nearest_resource(unit_position, Enums.ResourceType.GOLD, _search_range)
-			if result.has("resource") and result.has("position"):
-				var resource_tile = result["resource"] as ResourceTile
-				var resource_pos = result["position"] as Vector2i
-				
-				# 检查资源是否还有剩余
-				if resource_tile and not resource_tile.is_depleted():
-					# 存储找到的目标到共享上下文
-					shared_context["found_target"] = resource_tile
-					shared_context["found_target_position"] = resource_pos
-					found = true
-					print("FindTargetState: 找到金矿在位置 %s" % resource_pos)
-		
+			resource_type = Enums.ResourceType.GOLD
+		"IronOre", "iron_ore":
+			resource_type = Enums.ResourceType.IRON
+		"FoodResource", "food_resource", "MeatGrubNest", "meat_grub_nest":
+			resource_type = Enums.ResourceType.FOOD
 		_:
 			# 未知目标类型，返回失败
 			push_warning("FindTargetState: Unknown target_type: %s" % _target_type)
 			set_result(StateResult.Result.FAILURE)
 			return StateResult.Result.FAILURE
+	
+	# 查找资源（支持所有资源类型）
+	var result = tile_manager.find_nearest_resource(unit_position, resource_type, _search_range)
+	if result.has("resource") and result.has("position"):
+		var resource_tile = result["resource"] as ResourceTile
+		var resource_pos = result["position"] as Vector2i
+		
+		# 检查资源是否还有剩余
+		if resource_tile and not resource_tile.is_depleted():
+			# 存储找到的目标到共享上下文
+			shared_context["found_target"] = resource_tile
+			shared_context["found_target_position"] = resource_pos
+			shared_context["resource_type"] = resource_type  # 存储资源类型，用于后续存储
+			found = true
+			var resource_name = _get_resource_name(resource_type)
+			print("FindTargetState: 找到%s在位置 %s" % [resource_name, resource_pos])
 	
 	if found:
 		set_result(StateResult.Result.SUCCESS)
@@ -105,4 +114,18 @@ func update(delta: float, context: Dictionary = {}) -> int:
 ## 退出状态
 func exit(context: Dictionary = {}) -> void:
 	super.exit(context)
+
+## 获取资源类型名称（辅助方法）
+func _get_resource_name(resource_type: Enums.ResourceType) -> String:
+	match resource_type:
+		Enums.ResourceType.GOLD:
+			return "金矿"
+		Enums.ResourceType.MANA:
+			return "魔力水晶"
+		Enums.ResourceType.FOOD:
+			return "食物资源"
+		Enums.ResourceType.IRON:
+			return "铁矿"
+		_:
+			return "未知资源"
 

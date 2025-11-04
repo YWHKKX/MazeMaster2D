@@ -86,6 +86,8 @@ func update(delta: float, context: Dictionary = {}) -> int:
 					resource_type = Enums.ResourceType.MANA
 				"FOOD", "food":
 					resource_type = Enums.ResourceType.FOOD
+				"IRON", "iron":
+					resource_type = Enums.ResourceType.IRON
 				_:
 					continue
 			
@@ -109,6 +111,11 @@ func update(delta: float, context: Dictionary = {}) -> int:
 			var food_amount = carried_resources.get("FOOD", carried_resources.get("food", 0))
 			if food_amount > 0:
 				resource_manager.add_food(food_amount)
+		
+		if carried_resources.has("IRON") or carried_resources.has("iron"):
+			var iron_amount = carried_resources.get("IRON", carried_resources.get("iron", 0))
+			if iron_amount > 0:
+				resource_manager.add_iron(iron_amount)
 	else:
 		# 其他类型的存储建筑，暂时直接添加到全局资源管理器
 		for resource_type_str in carried_resources.keys():
@@ -123,6 +130,8 @@ func update(delta: float, context: Dictionary = {}) -> int:
 					resource_manager.add_mana(amount)
 				"FOOD", "food":
 					resource_manager.add_food(amount)
+				"IRON", "iron":
+					resource_manager.add_iron(amount)
 			
 			stored_any = true
 			print("StoreResourceState: 存储 %d %s" % [amount, resource_type_str])

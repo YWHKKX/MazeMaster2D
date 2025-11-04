@@ -34,6 +34,27 @@ func enter(context: Dictionary = {}) -> void:
 		if value != null and value is Dictionary:
 			_resource_output = value
 	
+	# 从共享上下文获取资源类型，动态设置 resource_output
+	var shared_context = get_shared_context(context)
+	var resource_type_enum = shared_context.get("resource_type")
+	if resource_type_enum is Enums.ResourceType:
+		# 根据资源类型动态设置 resource_output
+		var resource_type_str = ""
+		match resource_type_enum:
+			Enums.ResourceType.GOLD:
+				resource_type_str = "GOLD"
+			Enums.ResourceType.IRON:
+				resource_type_str = "IRON"
+			Enums.ResourceType.FOOD:
+				resource_type_str = "FOOD"
+			Enums.ResourceType.MANA:
+				resource_type_str = "MANA"
+		
+		if not resource_type_str.is_empty():
+			# 如果 resource_output 为空或未包含当前资源类型，则设置默认值
+			if _resource_output.is_empty() or not _resource_output.has(resource_type_str):
+				_resource_output = {resource_type_str: 10}  # 默认每次提取10个资源
+	
 	# 重置交互进度
 	_interaction_progress = 0.0
 	_interaction_duration = 2.0 / _speed if _speed > 0 else 2.0  # 根据速度调整持续时间
@@ -83,8 +104,13 @@ func update(delta: float, context: Dictionary = {}) -> int:
 				_interaction_progress = 0.0  # 重置进度
 				
 				# 提取资源（根据resource_output配置）
-				var total_extracted = 0
 				var carried_resources = shared_context.get("carried_resources", {})
+				
+				# 获取单位引用以检查最大携带量
+				var unit = context.get("unit")
+				var max_gold_capacity: int = -1  # -1 表示无限制
+				if unit is Goblin:
+					max_gold_capacity = (unit as Goblin).get_max_gold_capacity()
 				
 				for resource_type_str in _resource_output.keys():
 					var resource_type: Enums.ResourceType
@@ -95,14 +121,28 @@ func update(delta: float, context: Dictionary = {}) -> int:
 							resource_type = Enums.ResourceType.MANA
 						"FOOD", "food":
 							resource_type = Enums.ResourceType.FOOD
+						"IRON", "iron":
+							resource_type = Enums.ResourceType.IRON
 						_:
 							continue
 					
 					var amount = _resource_output[resource_type_str]
 					if amount is int:
+						# 检查金币携带量限制（仅对哥布林的金币资源）
+						var current_carried = carried_resources.get(resource_type_str, 0)
+						if resource_type == Enums.ResourceType.GOLD and max_gold_capacity > 0:
+							# 如果已到达最大携带量，不再提取
+							if current_carried >= max_gold_capacity:
+								print("InteractionState: 哥布林金币携带量已达上限 (%d/%d)" % [current_carried, max_gold_capacity])
+								continue
+							# 计算还能携带多少
+							var remaining_capacity = max_gold_capacity - current_carried
+							if amount > remaining_capacity:
+								amount = remaining_capacity
+								print("InteractionState: 调整提取量以符合携带上限 (%d -> %d)" % [_resource_output[resource_type_str], amount])
+						
 						# 从资源点提取
 						var extracted = resource_tile.extract_resource(amount)
-						total_extracted += extracted
 						
 						# 将资源添加到单位携带的资源中
 						if not carried_resources.has(resource_type_str):

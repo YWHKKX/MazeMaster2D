@@ -63,9 +63,44 @@ func update(delta: float, context: Dictionary = {}) -> int:
 				shared_context.erase("found_storage")
 				shared_context.erase("found_storage_position")
 	
+	# 从共享上下文获取资源类型（如果工作流中已设置）
+	var resource_type_str = _resource_type
+	if resource_type_str.is_empty():
+		var resource_type_enum = shared_context.get("resource_type")
+		if resource_type_enum is Enums.ResourceType:
+			match resource_type_enum:
+				Enums.ResourceType.GOLD:
+					resource_type_str = "GOLD"
+				Enums.ResourceType.IRON:
+					resource_type_str = "IRON"
+				Enums.ResourceType.FOOD:
+					resource_type_str = "FOOD"
+				Enums.ResourceType.MANA:
+					resource_type_str = "MANA"
+	
+	# 根据资源类型自动选择存储建筑类型（如果未指定存储类型）
+	var storage_type = _storage_type
+	if storage_type.is_empty() and not resource_type_str.is_empty():
+		# 根据资源类型自动选择存储建筑
+		match resource_type_str:
+			"GOLD", "gold":
+				storage_type = "Treasury"  # 金库或地牢之心
+			"IRON", "iron":
+				storage_type = "Treasury"  # 暂时使用地牢之心，后续改为MinePit
+			"FOOD", "food":
+				storage_type = "Treasury"  # 暂时使用地牢之心，后续改为FoodStorage
+			"MANA", "mana":
+				storage_type = "Treasury"  # 地牢之心或魔法祭坛
+			_:
+				storage_type = "Treasury"  # 默认使用地牢之心
+	
+	# 如果仍然没有存储类型，默认使用地牢之心
+	if storage_type.is_empty():
+		storage_type = "Treasury"
+	
 	# 根据存储点类型查找（默认搜索范围较大）
 	var search_range = 100.0  # 查找存储点的搜索范围
-	var result = tile_manager.find_nearest_building(unit_position, _storage_type, search_range)
+	var result = tile_manager.find_nearest_building(unit_position, storage_type, search_range)
 	
 	if result.has("building") and result.has("position"):
 		var building_tile = result["building"] as BuildingTile

@@ -124,7 +124,7 @@ func _render_building_tiles() -> void:
 func _find_building_start(pos: Vector2i, building_data: BuildingTile) -> Vector2i:
 	# 简单的实现：从当前位置向左上搜索，找到建筑的最小边界
 	# 这里假设建筑是连续放置的，从左上角开始
-	return pos  # 简化实现，假设pos就是左上角
+	return pos # 简化实现，假设pos就是左上角
 
 ## 创建建筑可视化节点
 func _create_building_visual(tile_pos: Vector2i, building_data: BuildingTile) -> void:
@@ -139,22 +139,22 @@ func _create_building_visual(tile_pos: Vector2i, building_data: BuildingTile) ->
 	fill_rect.position = world_pos
 	fill_rect.size = world_size
 	fill_rect.color = color
-	fill_rect.color.a = 0.3  # 半透明填充
-	fill_rect.z_index = 10  # 确保建筑显示在地形之上
+	fill_rect.color.a = 0.3 # 半透明填充
+	fill_rect.z_index = 10 # 确保建筑显示在地形之上
 	add_child(fill_rect)
 	
 	# 创建Line2D节点用于边框
 	var border_line = Line2D.new()
 	border_line.width = 3.0
 	border_line.default_color = color
-	border_line.z_index = 11  # 边框在建筑填充之上
+	border_line.z_index = 11 # 边框在建筑填充之上
 	
 	var points = [
 		world_pos,
 		Vector2(world_pos.x + world_size.x, world_pos.y),
 		Vector2(world_pos.x + world_size.x, world_pos.y + world_size.y),
 		Vector2(world_pos.x, world_pos.y + world_size.y),
-		world_pos  # 闭合
+		world_pos # 闭合
 	]
 	
 	for point in points:
@@ -165,9 +165,9 @@ func _create_building_visual(tile_pos: Vector2i, building_data: BuildingTile) ->
 ## 获取建筑颜色
 func _get_building_color(building_data: BuildingTile) -> Color:
 	if building_data is DungeonHeartTile:
-		return Color(0.8, 0.2, 0.2)  # 深红色 = 地牢之心
+		return Color(0.8, 0.2, 0.2) # 深红色 = 地牢之心
 	else:
-		return Color(0.6, 0.4, 0.2)  # 棕色 = 其他建筑
+		return Color(0.6, 0.4, 0.2) # 棕色 = 其他建筑
 
 ## 渲染资源瓦块（从Tile读取）
 func _render_resource_tiles() -> void:
@@ -188,42 +188,54 @@ func _render_resource_tiles() -> void:
 ## 创建资源瓦块可视化节点
 func _create_resource_tile_visual(tile_pos: Vector2i, resource_data: ResourceTile) -> void:
 	var world_pos = Vector2(tile_pos.x * _tile_size.x, tile_pos.y * _tile_size.y)
-	var radius = float(_tile_size.x) * 0.3  # 圆形半径为瓦块大小的30%
 	
-	# 根据资源类型选择颜色
-	var color = _get_resource_node_color(resource_data.resource_type)
+	# 使用像素艺术生成器创建纹理
+	var pixel_art_generator = PixelArtGenerator.new()
+	var image = pixel_art_generator.create_resource_tile_image(resource_data.resource_type, _tile_size)
 	
-	# 创建圆形Sprite节点（使用简单的圆形纹理或ColorRect）
-	# 由于Godot没有直接的圆形节点，我们使用ColorRect配合自定义shader或使用Polygon2D
-	# 这里使用Polygon2D创建圆形
+	# 创建 ImageTexture
+	var image_texture = ImageTexture.create_from_image(image)
 	
-	var polygon = Polygon2D.new()
-	polygon.color = color
-	polygon.position = world_pos
-	polygon.z_index = 10  # 确保资源显示在地形之上
+	# 使用 Sprite2D 节点渲染资源瓦块（更适合像素艺术）
+	# 注意：项目设置 → 渲染 → 纹理 → 默认纹理过滤应设置为 "Nearest" 以保持像素清晰
+	# 如果项目设置已配置为 Nearest，则不需要额外设置材质
+	var sprite = Sprite2D.new()
+	# Sprite2D 默认以纹理中心对齐，world_pos 是左上角
+	# 需要将 position 设置为纹理中心位置（左上角 + 瓦块大小的一半）
+	sprite.position = world_pos + Vector2(_tile_size.x / 2.0, _tile_size.y / 2.0)
+	sprite.texture = image_texture
+	sprite.z_index = 10 # 确保资源显示在地形之上
 	
-	# 生成圆形顶点（16边形近似圆形）
-	var points: PackedVector2Array = []
-	var segments = 16
-	for i in range(segments + 1):
-		var angle = (float(i) / float(segments)) * TAU
-		var point = Vector2(cos(angle) * radius, sin(angle) * radius)
-		points.append(point)
+	# 在 Godot 4 中，纹理过滤主要通过项目设置控制
+	# 重要：必须在项目设置中配置默认纹理过滤为 "Nearest" 以保持像素清晰
+	# 项目设置路径：项目 → 项目设置 → 渲染 → 纹理 → 默认纹理过滤 → 设置为 "Nearest"
+	# 如果项目设置已配置，则不需要代码设置材质
 	
-	polygon.polygon = points
-	add_child(polygon)
+	add_child(sprite)
 	
-	# 创建边框（使用Line2D）
+	# 创建边框（使用Line2D）- 矩形边框
 	var border_line = Line2D.new()
 	border_line.width = 2.0
 	border_line.default_color = Color.BLACK
-	border_line.z_index = 11  # 边框在资源之上
+	border_line.z_index = 11 # 边框在资源之上
+	
+	# 矩形四个角点
+	var points = [
+		world_pos,
+		Vector2(world_pos.x + _tile_size.x, world_pos.y),
+		Vector2(world_pos.x + _tile_size.x, world_pos.y + _tile_size.y),
+		Vector2(world_pos.x, world_pos.y + _tile_size.y),
+		world_pos # 闭合
+	]
 	
 	for point in points:
-		border_line.add_point(world_pos + point)
-	border_line.add_point(world_pos + points[0]) # 闭合
+		border_line.add_point(point)
 	
 	add_child(border_line)
+	
+	# 注意：Area2D交互节点已移除
+	# InteractionState目前使用距离判断而非Area2D检测
+	# 如果将来需要Area2D交互，可以在此处重新添加ResourceInteractable节点
 
 ## 获取资源节点颜色
 func _get_resource_node_color(resource_type: Enums.ResourceType) -> Color:
@@ -262,7 +274,7 @@ func _create_unit_visual(unit: Unit) -> void:
 		# 使用图片渲染
 		var sprite = Sprite2D.new()
 		sprite.position = world_pos
-		sprite.z_index = 15  # 单位显示在建筑/资源之上，但在状态指示器之下
+		sprite.z_index = 15 # 单位显示在建筑/资源之上，但在状态指示器之下
 		
 		# 加载纹理
 		var texture = load(texture_path)

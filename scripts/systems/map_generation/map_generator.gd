@@ -16,6 +16,8 @@ var _entity_manager: EntityManager = null
 var _building_manager: BuildingManager = null
 var _resource_node_manager: ResourceNodeManager = null
 var _gold_mine_generator: GoldMineGenerator = null
+var _iron_ore_generator: IronOreGenerator = null
+var _food_resource_generator: FoodResourceGenerator = null
 
 # 地图尺寸
 var map_width: int = 200
@@ -51,6 +53,8 @@ func set_entity_managers(tile_mgr: TileManager, entity_mgr: EntityManager = null
 	_resource_node_manager = resource_node_mgr
 	if _tile_manager:
 		_gold_mine_generator = GoldMineGenerator.new(_tile_manager)
+		_iron_ore_generator = IronOreGenerator.new(_tile_manager)
+		_food_resource_generator = FoodResourceGenerator.new(_tile_manager)
 
 ## 生成完整地图
 func GenerateMap() -> void:
@@ -194,9 +198,13 @@ func GenerateEntities(critical_cavities: Array[Cavity], functional_cavities: Arr
 		if cavity.type == Enums.CavityType.CRITICAL:
 			_generate_dungeon_heart(cavity)
 	
-	# 生成金矿（在地图任意可建造位置，作为资源瓦块）
+	# 生成资源瓦块（在地图任意可建造位置）
 	if _gold_mine_generator:
 		_gold_mine_generator.generate_gold_mines(20) # 生成20个金矿瓦块
+	if _iron_ore_generator:
+		_iron_ore_generator.generate_iron_ores(15) # 生成15个铁矿瓦块
+	if _food_resource_generator:
+		_food_resource_generator.generate_food_resources(12) # 生成12个食物资源瓦块
 
 ## 生成地牢之心（作为建筑瓦块）
 func _generate_dungeon_heart(cavity: Cavity) -> void:

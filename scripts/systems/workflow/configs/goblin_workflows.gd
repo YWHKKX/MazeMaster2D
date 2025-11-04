@@ -31,19 +31,25 @@ static func create_mining_workflow() -> WorkflowConfig:
 	})
 	
 	# 3. 挖矿交互
+	# InteractionState 会根据共享上下文中的 resource_type 动态设置 resource_output
+	# 如果 resource_output 为空，会自动根据资源类型设置默认值（10个资源）
 	config.add_state("InteractionState", {
 		"interaction_type": "mine",
 		"speed": 1.0,
-		"resource_output": {"GOLD": 10}
+		"resource_output": {}  # 空字典，由 InteractionState 根据 resource_type 动态设置
 	}, {
 		"success": "FindStorageState",
 		"failure": "FindTargetState"
 	})
 	
-	# 4. 查找金库存储点
+	# 4. 查找存储点（根据资源类型自动选择）
+	# FindStorageState 会自动从共享上下文获取 resource_type 并选择对应的存储建筑：
+	# - GOLD/MANA -> DungeonHeart 或 Treasury
+	# - IRON -> MinePit
+	# - FOOD -> FoodStorage 或 DungeonHeart
 	config.add_state("FindStorageState", {
-		"storage_type": "Treasury",
-		"resource_type": "GOLD"
+		"storage_type": "",  # 空字符串，让FindStorageState根据resource_type自动选择
+		"resource_type": ""  # 空字符串，从共享上下文获取
 	}, {
 		"success": "MoveToTargetState",
 		"failure": "IdleState"
@@ -59,11 +65,12 @@ static func create_mining_workflow() -> WorkflowConfig:
 	})
 	
 	# 6. 存储资源
+	# StoreResourceState 会从共享上下文获取 carried_resources 并存储所有资源类型
 	config.add_state("StoreResourceState", {
-		"resource_type": "GOLD",
+		"resource_type": "",  # 空字符串，从共享上下文获取
 		"storage_key": "found_storage"
 	}, {
-		"success": "FindTargetState",  # 循环回到找矿
+		"success": "FindTargetState",  # 循环回到找资源
 		"failure": "FindStorageState"
 	})
 	
